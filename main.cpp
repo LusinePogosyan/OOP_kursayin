@@ -1,48 +1,154 @@
 #include <iostream>
-#include <string>
 #include <vector>
-#include <memory>
-#include "Lexer.h"
-#include "Parser.h"
-#include "Evaluator.h"
+#include <string>
+#include <fstream>
+#include <sstream>
 
-int main() {
-    std::string line;
-    std::string input;
+#include "Compiler/SymbolTable.h"
+#include "src/backend/BackendPipeline.h"
+#include "src/frontend/FrontendPipeline.h"
+#include "src/linker/ExecutableFormat.h"
+#include "src/runtime/VmMonitor.h"
 
-    std::cout << "--- OOP Interpreter (Iterative Mode) ---" << std::endl;
-    std::cout << "Enter your code (End with Ctrl+D or an empty line):" << std::endl;
+namespace {
+struct CliOptions {
+    bool quiet = false;
+    bool testMode = false;
+    int expectedReturn = 0;
+    std::string sourcePath;
+    std::string sourceList;
+};
 
-    // Read multiple lines of code
-    while (std::getline(std::cin, line) && !line.empty()) {
-        input += line + "\n";
+std::string readFileText(const std::string& path) {
+    std::ifstream in(path);
+    if (!in) {
+        throw std::runtime_error("Cannot open source file: " + path);
     }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    return buffer.str();
+}
 
-    if (input.empty()) {
-        std::cout << "No input provided. Exiting." << std::endl;
-        return 0;
+std::string joinSources(const std::string& csvPaths) {
+    std::stringstream ss(csvPaths);
+    std::string item;
+    std::string merged;
+    while (std::getline(ss, item, ',')) {
+        if (item.empty()) continue;
+        if (!merged.empty()) merged += "\n";
+        merged += readFileText(item);
+        merged += "\n";
     }
+    return merged;
+}
 
+CliOptions parseCli(int argc, char** argv) {
+    CliOptions opts;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--source" && i + 1 < argc) {
+            opts.sourcePath = argv[++i];
+        } else if (arg == "--sources" && i + 1 < argc) {
+            opts.sourceList = argv[++i];
+        } else if (arg == "--quiet") {
+            opts.quiet = true;
+        } else if (arg == "--test" && i + 2 < argc) {
+            opts.testMode = true;
+            opts.sourcePath = argv[++i];
+            opts.expectedReturn = std::stoi(argv[++i]);
+            opts.quiet = true;
+        }
+    }
+    return opts;
+}
+}
+
+int main(int argc, char** argv) {
     try {
-        // 1. Lexical Analysis: Break input string into tokens
-        Lexer lexer(input);
+        std::string source;
+        CliOptions opts = parseCli(argc, argv);
 
-        // 2. Parsing: Build the Abstract Syntax Tree (AST)
-        Parser parser(lexer);
-        auto tree = parser.parse();
+        if (!opts.sourceList.empty()) {
+            source = joinSources(opts.sourceList);
+        } else if (!opts.sourcePath.empty()) {
+            if (opts.sourcePath.find(',') != std::string::npos) {
+                source = joinSources(opts.sourcePath);
+            } else {
+                source = readFileText(opts.sourcePath);
+            }
+        } else {
+            source =
+            "int g = 5; "
+            "int main() { "
+            "int acc = 0; "
+            "for(int i = 0; i < 4; i = i + 1) { "
+            "static int s = i + 1; "
+            "acc = acc + s; "
+            "} "
+            "g = g + 1; "
+            "acc = acc + g; "
+            "return acc; "
+            "}";
+        }
 
-        // 3. Evaluation: 
-        // This will 'Flatten' the tree into a vector of Instructions
-        // and then run the Fetch-Decode-Execute loop.
-        Evaluator eval;
-        eval.run(tree);
+        if (!opts.quiet) {
+            std::cout << "Compiling source: " << source << "\n";
+        }
+
+        // 1) Frontend: Parser -> AST
+        frontend::FrontendPipeline frontend;
+        auto frontendResult = frontend.compileToAst(source);
+
+        // 2) AST optimizer stage (placeholder hook for project requirements)
+        backend::AstOptimizer astOptimizer;
+        astOptimizer.optimize(frontendResult.ast);
+
+        // 3) IR translation
+        SymbolTable st;
+
+        backend::BackendPipeline backend;
+        auto ir = backend.lowerToLogicalIr(frontendResult.ast, st);
+
+        // 4) IR optimizer stage (placeholder hook for project requirements)
+        backend::IrOptimizer irOptimizer;
+        irOptimizer.optimize(ir);
+
+        // 5) Final program image
+        std::vector<Instruction> program = ir.instructions;
+        program.push_back({OpCode::HALT, 0, 0, 0, 0});
+
+        linker_stage::ToolchainLinker linker;
+        auto image = linker.linkToImage(program, ir.dataWords);
+        linker.writeExecutable(image, "a.out.exe");
+
+        // 6) VM Monitor runtime
+        runtime::VmMonitor monitor(65536);
+        if (!opts.quiet) {
+            std::cout << "--- Executing Generated Code ---\n";
+        }
+        monitor.run(program, ir.dataWords, static_cast<uint32_t>(ir.dataBaseAddress));
+        int result = monitor.readRegister(10);
+
+        if (opts.testMode) {
+            if (result != opts.expectedReturn) {
+                std::cerr << "Test failed for " << opts.sourcePath << ": got " << result
+                          << ", expected " << opts.expectedReturn << "\n";
+                return 1;
+            }
+            return 0;
+        }
+
+        if (!opts.quiet) {
+            monitor.dumpRegisters();
+            std::cout << "return value (a0): " << result << "\n";
+        } else {
+            std::cout << result << "\n";
+        }
 
     } catch (const std::exception& e) {
-        // Handle syntax or runtime errors (like division by zero)
-        std::cerr << "RUNTIME ERROR: " << e.what() << std::endl;
+        std::cerr << "Error during compilation/execution: " << e.what() << "\n";
         return 1;
     }
 
-    std::cout << "Execution finished successfully." << std::endl;
     return 0;
 }

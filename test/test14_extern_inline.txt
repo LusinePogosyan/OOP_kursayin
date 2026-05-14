@@ -1,0 +1,6 @@
+extern int g;
+int g = 3;
+inline int x = 100;
+int main() {
+    return g;
+}

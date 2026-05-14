@@ -1,0 +1,5 @@
+int g = 4;
+int main() {
+    static int s = 5;
+    return g + s;
+}

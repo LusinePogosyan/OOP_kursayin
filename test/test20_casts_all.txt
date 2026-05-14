@@ -1,0 +1,7 @@
+int main() {
+    int x = 15;
+    int a = static_cast<int>(x);
+    int b = (int)a;
+    int c = dynamic_cast<int>(b);
+    return c;
+}

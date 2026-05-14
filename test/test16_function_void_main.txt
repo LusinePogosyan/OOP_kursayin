@@ -1,0 +1,7 @@
+int main() {
+    return 9;
+}
+
+void helperVoid(int x) {
+    int y = 1;
+}

@@ -1,0 +1,9 @@
+int main() {
+    int x = 7;
+    if (x > 3) {
+        x = 22;
+    } else {
+        x = 0;
+    }
+    return x;
+}

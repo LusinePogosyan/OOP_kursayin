@@ -1,0 +1,12 @@
+tests/test01_arithmetic.txt|14
+tests/test02_comparison.txt|1
+tests/test03_if_else.txt|22
+tests/test04_while.txt|10
+tests/test05_for.txt|15
+tests/test06_do_while.txt|6
+tests/test07_compound_assign.txt|24
+tests/test08_bitwise.txt|10
+tests/test09_ternary.txt|100
+tests/test10_static_global.txt|9
+tests/test11_continue_break.txt|18
+tests/test12_bool_literals.txt|5

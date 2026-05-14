@@ -1,0 +1,10 @@
+tests/multifile_a.txt,tests/multifile_b.txt|9
+tests/test14_extern_inline.txt|3
+tests/test15_function_int_main.txt|11
+tests/test16_function_void_main.txt|9
+tests/test17_pass_by_value_signature.txt|7
+tests/test18_pass_by_reference_signature.txt|8
+tests/test19_pass_by_pointer_signature.txt|6
+tests/test20_casts_all.txt|15
+tests/test21_struct_union_class.txt|12
+tests/test22_extern_only.txt|4

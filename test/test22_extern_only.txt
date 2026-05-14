@@ -1,0 +1,6 @@
+extern int g;
+int g = 4;
+
+int main() {
+    return g;
+}

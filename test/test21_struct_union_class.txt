@@ -1,0 +1,19 @@
+struct Point {
+    int x;
+    int y;
+};
+
+union Number {
+    int asInt;
+};
+
+class Holder {
+public:
+    int value;
+private:
+    int hidden;
+};
+
+int main() {
+    return 12;
+}

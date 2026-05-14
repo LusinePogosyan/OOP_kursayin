@@ -1,0 +1,2 @@
+int g = 7;
+inline int marker = 1;

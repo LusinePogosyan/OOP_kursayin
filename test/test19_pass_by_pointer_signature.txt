@@ -1,0 +1,5 @@
+int byPtr(int* p);
+
+int main() {
+    return 6;
+}

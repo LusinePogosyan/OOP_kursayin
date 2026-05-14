@@ -1,0 +1,10 @@
+int main() {
+    int t = true;
+    int f = false;
+    if (t) {
+        if (!f) {
+            return 5;
+        }
+    }
+    return 0;
+}
